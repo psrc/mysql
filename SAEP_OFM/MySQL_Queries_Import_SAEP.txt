@@ -1,0 +1,144 @@
+create table ofm_block_estimates_092814
+(
+county_name varchar (30)
+,census_block_code_complete varchar (30)
+,census_2010_total_population float not null
+,census_2010_household_population float not null
+,census_2010_total_group_quarter_population float not null
+,census_2010_total_housing_units float not null
+,census_2010_occupied_housing_units float not null
+,estimated_total_population_2011 float not null
+,estimated_household_population_2011 float not null
+,estimated_total_group_quarter_population_2011 float not null
+,estimated_total_housing_units_2011 float not null
+,total_estimated_occupied_housing_units_2011 float not null
+,estimated_total_population_2012 float not null
+,estimated_household_population_2012 float not null
+,estimated_total_group_quarter_population_2012 float not null
+,estimated_total_housing_units_2012 float not null
+,total_estimated_occupied_housing_units_2012 float not null
+,estimated_total_population_2013 float not null
+,estimated_household_population_2013 float not null
+,estimated_total_group_quarter_population_2013 float not null
+,estimated_total_housing_units_2013 float not null
+,total_estimated_occupied_housing_units_2013 float not null
+,estimated_total_population_2014 float not null
+,estimated_household_population_2014 float not null
+,estimated_total_group_quarter_population_2014 float not null
+,estimated_total_housing_units_2014 float not null
+,total_estimated_occupied_housing_units_2014 float not null
+,estimated_total_population_2015 float not null
+,estimated_household_population_2015 float not null
+,estimated_total_group_quarter_population_2015 float not null
+,estimated_total_housing_units_2015 float not null
+,total_estimated_occupied_housing_units_2015 float not null
+,saep_version varchar(100)
+,primary key (census_block_code_complete)
+);
+
+LOAD DATA LOCAL INFILE 'C:/Users/MarkS/Desktop/Other_temp/PSRC_SAEP_POST_BLK2010.txt'
+INTO TABLE ofm_block_estimates_092814
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+#IGNORE 1 LINES
+(
+county_name
+,census_block_code_complete
+,census_2010_total_population
+,census_2010_household_population
+,census_2010_total_group_quarter_population
+,census_2010_total_housing_units
+,census_2010_occupied_housing_units
+,estimated_total_population_2011
+,estimated_household_population_2011
+,estimated_total_group_quarter_population_2011
+,estimated_total_housing_units_2011
+,total_estimated_occupied_housing_units_2011
+,estimated_total_population_2012
+,estimated_household_population_2012
+,estimated_total_group_quarter_population_2012
+,estimated_total_housing_units_2012
+,total_estimated_occupied_housing_units_2012
+,estimated_total_population_2013
+,estimated_household_population_2013
+,estimated_total_group_quarter_population_2013
+,estimated_total_housing_units_2013
+,total_estimated_occupied_housing_units_2013
+,estimated_total_population_2014
+,estimated_household_population_2014
+,estimated_total_group_quarter_population_2014
+,estimated_total_housing_units_2014
+,total_estimated_occupied_housing_units_2014
+,estimated_total_population_2015
+,estimated_household_population_2015
+,estimated_total_group_quarter_population_2015
+,estimated_total_housing_units_2015
+,total_estimated_occupied_housing_units_2015
+,saep_version
+);
+
+
+create table census_blocks_2010_psrc_zones_correspondence
+(
+ID int
+,geoid varchar(30)
+,state varchar(10)
+,county varchar(10)
+,tract varchar(10)
+,tract_8dig varchar(10)
+,blkgrp varchar(10)
+,block varchar(10)
+,taz_old_938 int
+,faz_old_938 int
+,taz_new_938 int
+,taz_new_3700 int
+,primary key (geoid)
+);
+
+
+
+LOAD DATA LOCAL INFILE 'C:/Users/MarkS/Desktop/Other_temp/Blk10_PSRCZone_Correspondence.csv'
+INTO TABLE census_blocks_2010_psrc_zones_correspondence
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 LINES
+(
+id
+,geoid
+,state
+,county
+,tract
+,tract_8dig
+,blkgrp
+,block
+,taz_old_938
+,faz_old_938
+,taz_new_938
+,taz_new_3700
+);
+
+
+alter table ofm_data.census_blocks_2010_psrc_zones_correspondence add column geoid_15 varchar(30);
+
+update ofm_data.census_blocks_2010_psrc_zones_correspondence
+set geoid_15 = concat(state,'0',tract_8dig,block)
+;
+
+
+select
+census_blocks_2010_psrc_zones_correspondence.taz_new_3700
+,sum(ofm_block_estimates_092814.estimated_total_population_2014) as totpop14
+,sum(ofm_block_estimates_092814.estimated_household_population_2014) as hhpop14
+,sum(ofm_block_estimates_092814.estimated_total_group_quarter_population_2014) as gqpop14
+,sum(ofm_block_estimates_092814.estimated_total_housing_units_2014) as hu14
+,sum(ofm_block_estimates_092814.total_estimated_occupied_housing_units_2014) as hh14
+from ofm_block_estimates_092814
+inner join census_blocks_2010_psrc_zones_correspondence
+on ofm_block_estimates_092814.census_block_code_complete = census_blocks_2010_psrc_zones_correspondence.geoid_15
+group by
+census_blocks_2010_psrc_zones_correspondence.taz_new_3700
+;
+
+

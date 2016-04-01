@@ -1,1 +1,6 @@
-Small Area Estimates Program Population and Households from OFM
+SAEP = Small Area Estimates Program. 
+Block (internal use only) & Block Group (public release data) estimates of population, households, housing units from WA state Office of Financial Management (OFM).
+Queries to read csv versions of the SAEP files to MYSQL, and combine with a block -level correspondence file to 4K zones for updated estimates by zone. 
+Will require a bit of tailoring depending on CSV file structure.
+- MHS written/used week of 3-28-16
+
