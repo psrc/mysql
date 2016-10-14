@@ -1,4 +1,3 @@
-With table name changed to "development_constraints_crosstab_summary"
 Create Table development_constraints_crosstab_summary
 Select
 development_constraints.plan_type_id,
