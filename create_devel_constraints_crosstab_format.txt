@@ -1,0 +1,161 @@
+With table name changed to "development_constraints_crosstab_summary"
+Create Table development_constraints_crosstab_summary
+Select
+development_constraints.plan_type_id,
+count(constraint_id) as number_of_constraints
+from development_constraints
+group by plan_type_id;
+
+alter table development_constraints_crosstab_summary
+add column g1_du_min float,
+add column g1_du_max float,
+add column g1_far_min float,
+add column g1_far_max float,
+add column g2_du_min float,
+add column g2_du_max float,
+add column g2_far_min float,
+add column g2_far_max float,
+add column g3_du_min float,
+add column g3_du_max float,
+add column g3_far_min float,
+add column g3_far_max float,
+add column g4_du_min float,
+add column g4_du_max float,
+add column g4_far_min float,
+add column g4_far_max float,
+add column g5_du_min float,
+add column g5_du_max float,
+add column g5_far_min float,
+add column g5_far_max float,
+add column g6_du_min float,
+add column g6_du_max float,
+add column g6_far_min float,
+add column g6_far_max float
+;
+
+update development_constraints_crosstab_summary set
+g1_du_min = 0,
+g1_du_max = 0,
+g1_far_min = 0,
+g1_far_max = 0,
+g2_du_min = 0,
+g2_du_max = 0,
+g2_far_min = 0,
+g2_far_max = 0,
+g3_du_min = 0,
+g3_du_max = 0,
+g3_far_min = 0,
+g3_far_max = 0,
+g4_du_min = 0,
+g4_du_max = 0,
+g4_far_min = 0,
+g4_far_max = 0,
+g5_du_min = 0,
+g5_du_max = 0,
+g5_far_min = 0,
+g5_far_max = 0,
+g6_du_min = 0,
+g6_du_max = 0,
+g6_far_min = 0,
+g6_far_max = 0
+;
+
+alter table development_constraints_crosstab_summary add primary key(plan_type_id);
+
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g1_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g1_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=1
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g1_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g1_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=1
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g2_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g2_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=2
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g2_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g2_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=2
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g3_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g3_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=3
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g3_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g3_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=3
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g4_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g4_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=4
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g4_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g4_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=4
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g5_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g5_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=5
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g5_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g5_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=5
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g6_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g6_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=6
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g6_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g6_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=6
+
+;
