@@ -1,0 +1,541 @@
+
+# ===================================================================================================
+# Creating copies of staging inputs, then creating the constraints summary and parcel extract tables.
+# ===================================================================================================
+
+# making copies so I don't screw up the orginals
+
+create database urbansim_staging_copy_101516;
+
+create table urbansim_staging_copy_101516.parcels
+select
+parcel_id
+,plan_type_id
+,x_coord_sp
+,y_coord_sp
+,city_id
+,county_id
+from psrc_2014_parcel_baseyear_staging.parcels;
+
+create table urbansim_staging_copy_101516.development_constraints
+select *
+from psrc_2014_parcel_baseyear_staging.development_constraints;
+
+
+###
+# Creating the crosstabs summary table
+###
+
+
+Create Table development_constraints_crosstab_summary
+Select
+development_constraints.plan_type_id,
+count(constraint_id) as number_of_constraints
+from development_constraints
+group by plan_type_id;
+
+alter table development_constraints_crosstab_summary
+add column g1_du_min float,
+add column g1_du_max float,
+add column g1_far_min float,
+add column g1_far_max float,
+add column g2_du_min float,
+add column g2_du_max float,
+add column g2_far_min float,
+add column g2_far_max float,
+add column g3_du_min float,
+add column g3_du_max float,
+add column g3_far_min float,
+add column g3_far_max float,
+add column g4_du_min float,
+add column g4_du_max float,
+add column g4_far_min float,
+add column g4_far_max float,
+add column g5_du_min float,
+add column g5_du_max float,
+add column g5_far_min float,
+add column g5_far_max float,
+add column g6_du_min float,
+add column g6_du_max float,
+add column g6_far_min float,
+add column g6_far_max float
+;
+
+update development_constraints_crosstab_summary set
+g1_du_min = 0,
+g1_du_max = 0,
+g1_far_min = 0,
+g1_far_max = 0,
+g2_du_min = 0,
+g2_du_max = 0,
+g2_far_min = 0,
+g2_far_max = 0,
+g3_du_min = 0,
+g3_du_max = 0,
+g3_far_min = 0,
+g3_far_max = 0,
+g4_du_min = 0,
+g4_du_max = 0,
+g4_far_min = 0,
+g4_far_max = 0,
+g5_du_min = 0,
+g5_du_max = 0,
+g5_far_min = 0,
+g5_far_max = 0,
+g6_du_min = 0,
+g6_du_max = 0,
+g6_far_min = 0,
+g6_far_max = 0
+;
+
+alter table development_constraints_crosstab_summary add primary key(plan_type_id);
+
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g1_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g1_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=1
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g1_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g1_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=1
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g2_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g2_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=2
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g2_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g2_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=2
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g3_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g3_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=3
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g3_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g3_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=3
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g4_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g4_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=4
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g4_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g4_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=4
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g5_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g5_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=5
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g5_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g5_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=5
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g6_du_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g6_du_max=development_constraints.maximum
+where development_constraints.constraint_type='units_per_acre'
+and development_constraints.generic_land_use_type_id=6
+;
+update development_constraints_crosstab_summary
+inner join development_constraints
+on development_constraints_crosstab_summary.plan_type_id=development_constraints.plan_type_id
+set development_constraints_crosstab_summary.g6_far_min=development_constraints.minimum,
+development_constraints_crosstab_summary.g6_far_max=development_constraints.maximum
+where development_constraints.constraint_type='far'
+and development_constraints.generic_land_use_type_id=6
+;
+
+
+###
+# Creating parcel-constraint mashup
+###
+
+
+alter table parcels
+add column g1_du_min float,
+add column g1_du_max float,
+add column g1_far_min float,
+add column g1_far_max float,
+add column g2_du_min float,
+add column g2_du_max float,
+add column g2_far_min float,
+add column g2_far_max float,
+add column g3_du_min float,
+add column g3_du_max float,
+add column g3_far_min float,
+add column g3_far_max float,
+add column g4_du_min float,
+add column g4_du_max float,
+add column g4_far_min float,
+add column g4_far_max float,
+add column g5_du_min float,
+add column g5_du_max float,
+add column g5_far_min float,
+add column g5_far_max float,
+add column g6_du_min float,
+add column g6_du_max float,
+add column g6_far_min float,
+add column g6_far_max float;
+
+update parcels set
+g1_du_min = 0,
+g1_du_max = 0,
+g1_far_min = 0,
+g1_far_max = 0,
+g2_du_min = 0,
+g2_du_max = 0,
+g2_far_min = 0,
+g2_far_max = 0,
+g3_du_min = 0,
+g3_du_max = 0,
+g3_far_min = 0,
+g3_far_max = 0,
+g4_du_min = 0,
+g4_du_max = 0,
+g4_far_min = 0,
+g4_far_max = 0,
+g5_du_min = 0,
+g5_du_max = 0,
+g5_far_min = 0,
+g5_far_max = 0,
+g6_du_min = 0,
+g6_du_max = 0,
+g6_far_min = 0,
+g6_far_max = 0;
+
+
+update parcels k
+inner join development_constraints_crosstab_summary c
+on k.plan_type_id = c.plan_type_id
+set
+k.g1_du_min = c.g1_du_min,
+k.g1_du_max = c.g1_du_max,
+k.g1_far_min = c.g1_far_min,
+k.g1_far_max = c.g1_far_max,
+k.g2_du_min = c.g2_du_min,
+k.g2_du_max = c.g2_du_max,
+k.g2_far_min = c.g2_far_min,
+k.g2_far_max = c.g2_far_max,
+k.g3_du_min = c.g3_du_min,
+k.g3_du_max = c.g3_du_max,
+k.g3_far_min = c.g3_far_min,
+k.g3_far_max = c.g3_far_max,
+k.g4_du_min = c.g4_du_min,
+k.g4_du_max = c.g4_du_max,
+k.g4_far_min = c.g4_far_min,
+k.g4_far_max = c.g4_far_max,
+k.g5_du_min = c.g5_du_min,
+k.g5_du_max = c.g5_du_max,
+k.g5_far_min = c.g5_far_min,
+k.g5_far_max = c.g5_far_max,
+k.g6_du_min = c.g6_du_min,
+k.g6_du_max = c.g6_du_max,
+k.g6_far_min = c.g6_far_min,
+k.g6_far_max = c.g6_far_max
+;
+
+
+alter table parcels add column sum_all_min_max_values float;
+update parcels set sum_all_min_max_values = 0;
+
+
+update parcels
+set sum_all_min_max_values =
+g1_du_min+
+g1_du_max+
+g1_far_min+
+g1_far_max+
+g2_du_min+
+g2_du_max+
+g2_far_min+
+g2_far_max+
+g3_du_min+
+g3_du_max+
+g3_far_min+
+g3_far_max+
+g4_du_min+
+g4_du_max+
+g4_far_min+
+g4_far_max+
+g5_du_min+
+g5_du_max+
+g5_far_min+
+g5_far_max+
+g6_du_min+
+g6_du_max+
+g6_far_min+
+g6_far_max;
+
+
+alter table parcels add column max_du float, add column max_far float;
+
+update parcels set max_du = 0, max_far = 0;
+
+update parcels
+set max_du = greatest(g1_du_max,g2_du_max,g3_du_max,g4_du_max,g5_du_max,g6_du_max);
+
+update parcels
+set max_far = greatest(g1_far_max,g2_far_max,g3_far_max,g4_far_max,g5_far_max,g6_far_max);
+
+###
+###
+# At this point I call up ArcGIS and ODBC join to MySQL, bring entire or a subset of the parcels table into GIS,
+# thematically map the Max values, and see how they visually compare to the FLU layer
+###
+###
+
+
+#=========================
+# QC checks on constraints
+#=========================
+
+
+# Is Type 1000 Lockout code present?
+select *
+from psrc_2014_parcel_baseyear_staging.development_constraints where plan_type_id = 1000;
+
+# Are there any other Lockout codes?  If so, how many?  Type 1000s should be around quarter-million if consistent with last set of inputs.
+select
+plan_type_id,
+count(plan_type_id)
+from parcels
+where sum_all_min_max_values = 0
+group by plan_type_id;
+
+# Canarys checks
+select
+parcel_id
+,plan_type_id
+from psrc_2014_parcel_baseyear_staging.parcels
+where parcel_id in (
+1058936 # Mark's canary - Kent CBD area
+,820542 # Beccah's canary - Kent MIC areas
+,820545 # Beccah's canary - Kent MIC areas
+);
+
+select * from
+psrc_2014_parcel_baseyear_staging.development_constraints
+where plan_type_id in (
+191
+,1000
+,780
+)
+order by plan_type_id, generic_land_use_type_id;
+
+
+# Looking for Mins higher than Maxs
+select * from development_constraints_crosstab_summary
+where
+#g1_du_min > g1_du_max;
+#g2_du_min > g2_du_max;
+#g6_du_min > g6_du_max;
+#g3_far_min > g3_far_max;
+#g4_far_min > g4_far_max;
+#g5_far_min > g5_far_max;
+g6_far_min > g6_far_max;
+
+select * from development_constraints where minimum < 0;
+select * from development_constraints where maximum < 0;
+
+
+# Checking for constaints higher than Type 6 (Mixed Use, our highest one being used by Developer Model)
+select * from development_constraints where generic_land_use_type_id>6;
+
+
+#==========================================
+# Adding information from the FLU shapefile
+#==========================================
+
+# Precursor:  Copied DBF from X:\DSA\FutureLandUse\FLU_2016 into my temp drive, brought into Excel to save DBF as CSV format.
+
+
+#NOTE: If you're using this to import a CSV file you made in Excel to MySQL, you might get a paragraph symbol at the end of the string you're importing. If that happens, modify this line:
+#LINES TERMINATED BY '\n'
+#to include a \r as well, IE
+#LINES TERMINATED BY '\r\n'
+#;
+
+create table flu_for_dc
+(
+OBJECTID integer not null
+,Zone varchar(100)
+,Juris varchar(100)
+,Key_Name varchar(100)
+,Defin varchar(100)
+,Min_DU_Ac float
+,Max_DU_Ac float
+,Min_FAR float
+,Max_FAR float
+,Max_Height varchar(100)
+,Res_Use varchar(10)
+,Comm_Use varchar(10)
+,Retail_Use varchar(10)
+,Indust_Use varchar(10)
+,Mixed_Use varchar(10)
+,Public_Use varchar(10)
+,PUD_Use varchar(10)
+,MaxCoverag varchar(50)
+,Shape_Leng float
+,Shape_Area float
+,plan_type int(11)
+,ptid int(11)
+,GID int(11)
+);
+
+alter table flu_for_dc add primary key(OBJECTID);
+
+LOAD DATA LOCAL INFILE 'T:/2016October/MarkS/flu_for_dc.csv'
+INTO TABLE flu_for_dc
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(
+OBJECTID
+,Zone
+,Juris
+,Key_Name
+,Defin
+,Min_DU_Ac
+,Max_DU_Ac
+,Min_FAR
+,Max_FAR
+,Max_Height
+,Res_Use
+,Comm_Use
+,Retail_Use
+,Indust_Use
+,Mixed_Use
+,Public_Use
+,PUD_Use
+,MaxCoverag
+,Shape_Leng
+,Shape_Area
+,plan_type
+,ptid
+,GID
+);
+
+
+#  QC this for PTID's greater than 1000 - if present nulls in the DBF/CSV might be screwing withe the LOAD DATA INTO command.
+#  Above structure of the command should have taken care of this though.
+
+select ptid from flu_for_dc order by ptid desc;
+
+
+# QC for multiple FLU polygons assigned to same PTID - just want to see it before moving forward.
+
+select
+ptid
+,Max_DU_Ac
+,Max_FAR
+,count(OBJECTID) as instances
+from flu_for_dc
+group by ptid
+#order by instances desc
+;
+
+
+# adding columns to parcels table for FLU layer comps
+
+alter table parcels add index(plan_type_id);
+alter table flu_for_dc add index(ptid);
+
+alter table parcels
+add column flu_maxdu float,
+add column flu_maxfar float,
+add column du_diff float,
+add column far_diff float;
+
+alter table parcels add column flu_ptid int(11);
+update parcels set flu_ptid=0;
+
+update parcels
+set flu_maxdu =0
+,flu_maxfar =0
+,du_diff =0
+,far_diff =0
+,flu_ptid =0
+;
+
+update parcels p
+left join flu_for_dc f
+on p.plan_type_id = f.ptid
+set
+p.flu_maxdu = f.Max_DU_Ac
+,p.flu_maxfar = f.Max_FAR
+,p.flu_ptid = f.ptid
+;
+
+update parcels p
+set du_diff = max_du - flu_maxdu
+,far_diff = max_far - flu_maxfar;
+
+
+# create an extract table and work with that - dropping any parcel NOT captured in a polygon (fell between cracks) and any parcel tagged w
+# PTID = 1000 (environmental overlay zeroed out FLU allowables so can't compare to FLU)
+
+create table parcels_extract
+select * from parcels where flu_ptid is not null;
+
+delete from parcels_extract where plan_type_id =1000;
+
+# starting to analyze
+
+select
+du_diff
+,count(parcel_id)
+from parcels_extract
+group by du_diff;
+
+create table parcels_dudiff300
+select * from parcels_extract where du_diff = 300;
+
+
+
+
+
+
+
