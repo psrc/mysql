@@ -1,0 +1,234 @@
+--                                                -----------------------------------------------------------
+--                                                 Spin city-level PPH controls 'Larry Blaine Style' in MySQL 
+--      see J:\Projects\UrbanSim\NEW_DIRECTORY\Inputs\annual_control_totals\controls_from_2015_macro_forecast\Step2_2014_to_match_actual_PPH_from_2015_survey.xlsx
+--                                                -----------------------------------------------------------
+
+
+-- -----------------------------------------------
+-- Prepare inputs: city-level hh & hh_pop controls
+-- -----------------------------------------------
+/*
+	create table luv_hh_pop_control (city_id int, year int, total_hh int, total_hhpop int, PRIMARY KEY (city_id, year));
+
+  -- Add scenario hh and hhpop controls per jurisdiction
+	load data infile 'luv_hhpop_control.csv' into table luv_hh_pop_control
+		fields terminated by ',' enclosed by '"' lines terminated by '\r\n' ignore 1 lines;
+*/
+-- ----------------------------------------------------------------------------------------
+-- Create the pph control table; it takes 2014 as a seed and has empty values for LUV years
+-- ----------------------------------------------------------------------------------------
+
+	create table luv_pph_control (city_id int, pph int, year int, household_count int, PRIMARY KEY (city_id, pph, year));
+
+  	create table tmp_pph (pph int PRIMARY KEY NOT NULL); 
+  	insert into tmp_pph values (1),(2),(3),(4),(5),(6),(7);
+  	
+  	create table tmp_city (city_id int(3) PRIMARY KEY NOT NULL); 
+  	insert into tmp_city select city_id from luv_hh_pop_control group by city_id;
+  	
+  	create table tmp_year (year int(4) PRIMARY KEY NOT NULL); insert into tmp_year (year) VALUES (2014);
+  	insert into tmp_year select year from luv_hh_pop_control where year > 2014 group by year;
+
+	insert into luv_pph_control (city_id, year, pph, household_count)
+		select t1.city_id, t2.year, t3.pph, 1 as household_count from tmp_city as t1 join tmp_year as t2 join tmp_pph as t3
+		order by t1.city_id, t2.year, t3.pph;
+
+	drop table tmp_city; drop table tmp_year; drop table tmp_pph; 
+
+	create table tmp_seed like luv_pph_control;
+
+	insert into tmp_seed (city_id, pph, household_count, year) 
+		select 	t3.city_id, 
+				(case when t1.persons > 7 then 7 else t1.persons end) as pph, 
+				count(t1.household_id) as household_count, 
+				2014 as year 
+			from 2014_parcel_baseyear_core.households as t1 
+			join 2014_parcel_baseyear_core.buildings as t2 on t1.building_id=t2.building_id 
+			join 2014_parcel_baseyear_core.parcels as t3 on t2.parcel_id=t3.parcel_id 
+				group by t3.city_id, (case when t1.persons > 7 then 7 else t1.persons end);
+
+	update luv_pph_control as t1, tmp_seed as t2
+		set t1.household_count = t2.household_count
+		where t1.city_id=t2.city_id and t1.year=t2.year and t1.pph=t2.pph;
+
+	create table tmp_hhsum (city_id int, by_hh double);	
+	insert into tmp_hhsum(city_id, by_hh)
+	select city_id, sum(household_count) as by_hh from luv_pph_control group by city_id;
+
+	update luv_pph_control as t1, luv_pph_control as t2, sandbox_allocation_controls.borrow_distribution as t3, luv_hh_pop_control as t4, tmp_hhsum as t5
+		set t1.household_count = cast(t2.household_count as decimal) / t5.by_hh * t4.total_hh
+		where t1.city_id=t3.recipient_city_id and t1.city_id = t4.city_id and t1.year = 2014 and t2.year = 2014 and t4.year = 2050
+			and t3.donor_city_id = t2.city_id and t3.donor_city_id = t5.city_id and t1.pph = t2.pph;
+	update luv_pph_control
+		set household_count = 1 where household_count < 1 or household_count is null;
+	drop table tmp_hhsum;
+	drop table tmp_seed;		
+
+-- -----------------------------------------------------------------------------------------------------
+-- Larry Blaine's formula is now applied to the empty cells; repeats for each subsequent allocation year
+-- Uses a stored procedure to cycle through the necessary years: need the rights to create one
+-- -----------------------------------------------------------------------------------------------------		
+
+	create table tmp_2group_values (city_id int PRIMARY KEY NOT NULL, small_hh double, small_pop double, large_hh double, large_pop double, r1 double default 1, r2 double default 1);
+
+	DROP PROCEDURE IF EXISTS hhpop_control ;
+	DELIMITER //
+	CREATE PROCEDURE hhpop_control(op_year int, ref_year int)
+	BEGIN
+
+	-- creates Larry’s aggregate measures for pph<3 vs. pph>2
+	insert into tmp_2group_values (city_id, small_hh, small_pop, large_hh, large_pop)
+		select city_id, 
+		sum(household_count * if(pph<3,1,0)) as small_hh, 
+		sum(household_count * if(pph<3,pph,0)) as small_pop, 
+		sum(household_count * if(pph>2,1,0)) as large_hh, 
+		sum(household_count * if(pph>2,pph,0)) as large_pop
+		from luv_pph_control where year = ref_year
+		group by city_id;
+
+	update tmp_2group_values as t3a, luv_hh_pop_control as t2a
+		set t3a.r1 = (t2a.total_hhpop - t2a.total_hh * t3a.large_pop / t3a.large_hh)/(t3a.small_pop - t3a.small_hh * t3a.large_pop / t3a.large_hh),
+			t3a.r2 = (t2a.total_hh - (t2a.total_hhpop - t2a.total_hh * t3a.large_pop / t3a.large_hh)/(t3a.small_pop - t3a.small_hh * t3a.large_pop / t3a.large_hh) * t3a.small_hh) / t3a.large_hh
+		where t3a.city_id = t2a.city_id and t2a.year = op_year and t3a.large_hh>0;
+
+	-- updates pph<3 based on relative ratios compared to the prior reference year
+	update luv_pph_control as t1, luv_pph_control as lag1, tmp_2group_values as t3, luv_hh_pop_control as t2
+		set t1.household_count = ifnull(round(lag1.household_count * t3.r1 ,0),0)
+		where t1.city_id=lag1.city_id and t1.city_id=t2.city_id and t1.city_id=t3.city_id and t1.year=t2.year and t1.pph=lag1.pph
+		and t1.year = op_year and lag1.year = ref_year and t1.pph < 3;
+
+	-- updates pph>2 to take up the slack
+	update luv_pph_control as t11, luv_pph_control as lag11, tmp_2group_values as t33, luv_hh_pop_control as t22
+		set t11.household_count = ifnull(round(lag11.household_count * t33.r2 ,0),0)
+		where t11.city_id=lag11.city_id and t11.city_id=t22.city_id and t11.city_id=t33.city_id and t11.year=t22.year and t11.pph=lag11.pph
+		and t11.year = op_year and lag11.year = ref_year and t11.pph > 2;	
+
+	update luv_pph_control set household_count=1 where household_count <1 or household_count is null and year = op_year;
+	truncate table tmp_2group_values;
+
+	END //
+	DELIMITER ;
+
+	CALL hhpop_control (2017, 2014);
+	CALL hhpop_control (2020, 2017);
+	CALL hhpop_control (2025, 2020);
+	CALL hhpop_control (2030, 2025);
+	CALL hhpop_control (2035, 2030);
+	CALL hhpop_control (2040, 2035);
+	CALL hhpop_control (2045, 2040);
+	CALL hhpop_control (2050, 2045);
+
+	drop procedure hhpop_control;
+	drop table tmp_2group_values;
+
+	update luv_pph_control
+		set household_count=0 where household_count<0 or household_count is null;
+
+-- -------------------------------------------------------------
+	-- Rebalance to handle any deviation from aggregate control
+-- -------------------------------------------------------------
+	create table tmp_target_compare (city_id int, year int, hh_sum decimal, hhpopsum decimal, PRIMARY KEY (city_id, year));
+	insert into tmp_target_compare(city_id, year, hh_sum, hhpopsum)
+			select city_id, year, sum(household_count), sum(household_count * pph) from luv_pph_control
+				group by city_id, year;
+
+	update luv_pph_control as t1, tmp_target_compare as t4, luv_hh_pop_control as t3
+		set t1.household_count = 0 , t4.hh_sum = 0, t4.hhpopsum = 0 
+        where t3.total_hh =0 and t1.city_id = t4.city_id and t1.city_id = t3.city_id 
+			and t1.year = t4.year and t1.year = t3.year and t3.total_hh<>t4.hh_sum;
+	 
+	DROP PROCEDURE IF EXISTS refine ;
+	DELIMITER //
+	CREATE PROCEDURE refine(increment int) 
+	BEGIN     
+     
+	update luv_pph_control as t1, tmp_target_compare as t4, luv_hh_pop_control as t3
+		set t1.household_count = t1.household_count + (t3.total_hh - t4.hh_sum), 
+			t4.hh_sum = t4.hh_sum + (t3.total_hh - t4.hh_sum), 
+			t4.hhpopsum = t4.hhpopsum + (t3.total_hh - t4.hh_sum) * t1.pph
+		where t1.city_id = t4.city_id and t1.city_id = t3.city_id 
+			and t1.year = t4.year and t1.year = t3.year and t3.total_hh <> t4.hh_sum and abs(t3.total_hhpop - t4.hhpopsum)/increment = t1.pph;
+            
+	END //
+	DELIMITER ;
+
+    CALL refine(1);
+    CALL refine(2);
+	CALL refine(3); 
+	CALL refine(4);  
+	CALL refine(5);   
+	CALL refine(6);
+    CALL refine(7);
+    CALL refine(8);    
+    CALL refine(9);
+ 	CALL refine(10);
+ 	CALL refine(11);
+ 	CALL refine(13);
+    CALL refine(17);
+    CALL refine(19);
+    CALL refine(23);
+    CALL refine(29);
+    CALL refine(41);
+ 	CALL refine(43);
+ 	CALL refine(47);
+ 	CALL refine(53);
+    CALL refine(59);
+    CALL refine(61);
+    CALL refine(67);
+    CALL refine(71);
+    CALL refine(31);    
+    
+	update luv_pph_control as t1, tmp_target_compare as t4, luv_hh_pop_control as t3
+		set t1.household_count = t1.household_count + (t3.total_hh - t4.hh_sum), 
+			t4.hh_sum = t4.hh_sum + (t3.total_hh - t4.hh_sum), 
+			t4.hhpopsum = t4.hhpopsum + (t3.total_hh - t4.hh_sum)
+		where t1.city_id = t4.city_id and t1.city_id = t3.city_id 
+			and t1.year = t4.year and t1.year = t3.year and t3.total_hh <> t4.hh_sum and abs(t3.total_hh - t4.hh_sum)=1 and t1.pph = 1;
+    
+	DROP PROCEDURE refine ;
+	drop table tmp_target_compare;	
+
+-- -------------------------------------------------------------
+-- create final input table
+-- -------------------------------------------------------------
+
+	create table annual_household_control_totals like 2014_parcel_baseyear_core.annual_household_control_totals;
+	insert into annual_household_control_totals 
+		select * from 2014_parcel_baseyear_core.annual_household_control_totals 
+		where year not in(2017,2020,2025,2030,2035,2040,2045,2050);
+
+	insert into annual_household_control_totals (total_number_of_households, city_id, year, persons_min, income_min, workers_min, workers_max, income_max, persons_max)
+		select household_count, city_id, year, pph, 0, 0, -1, -1, if(pph<7,pph,-1) 
+		from luv_pph_control 
+		where year in(2017,2020,2025,2030,2035,2040,2045,2050);
+
+/*
+	create table annual_employment_control_totals (city_id int(3) default -1, home_based_status int(1) default -1, year int(4) not null, total_number_of_jobs int(11) not null, sector_id int(2) default -1 not null);
+
+
+	insert into annual_employment_control_totals (city_id, home_based_status, year, total_number_of_jobs, sector_id)
+	select city_id, home_based_status, year, total_number_of_jobs, sector_id 
+		from 2014_parcel_baseyear_core.annual_employment_control_totals 
+		where year not in(2017,2020,2025,2030,2035,2040,2045,2050);
+
+	insert into annual_employment_control_totals (city_id, year, total_number_of_jobs)
+	VALUES
+	(x,x,x),
+*/
+-- --------------------------------------------------------------
+-- QC check
+-- --------------------------------------------------------------
+	create table tmp_check like luv_hh_pop_control;
+	insert into tmp_check (city_id, year, total_hh, total_hhpop)
+		select city_id, year, sum(household_count) as total_hh, sum(pph*household_count) as total_hhpop 
+		from luv_pph_control where year > 2014 group by city_id, year;
+
+	alter table tmp_check add column (diff_hh int(11), diff_hhpop int(11));
+	update tmp_check as t1, luv_hh_pop_control as t2
+		set t1.diff_hh = t1.total_hh - t2.total_hh,  t1.diff_hhpop = t1.total_hhpop - t2.total_hhpop
+		where t1.city_id=t2.city_id and t1.year=t2.year;
+
+select year, sum(total_hh), sum(total_hhpop), sum(diff_hh), sum(diff_hhpop) from tmp_check group by year;
+#select * from tmp_check where abs(diff_hh)/total_hh > 0.05 or  abs(diff_hhpop)/total_hhpop > 0.05
+
+
